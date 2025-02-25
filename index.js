@@ -3,16 +3,18 @@ const express = require('express');
 const cors = require('cors');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
+require('dotenv').config(); // Load environment variables
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
+const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`; // Deployment-ready
 
 // Step 2: Middleware
-app.use(express.json()); // Parse JSON body
-app.use(cors()); // Allow cross-origin requests
+app.use(express.json());
+app.use(cors());
 
 // Step 3: In-Memory Storage
-const urlDatabase = {}; // { "shortID": "originalURL" }
+const urlDatabase = {};
 
 // Step 4: Swagger Documentation
 const swaggerOptions = {
@@ -71,10 +73,10 @@ app.post('/shorten', async (req, res) => {
         return res.status(400).json({ error: 'URL is required' });
     }
     
-    const shortId = await generateShortId(); // Generate short ID (6 characters)
+    const shortId = await generateShortId();
     urlDatabase[shortId] = originalUrl;
     
-    res.json({ shortUrl: `http://localhost:${PORT}/${shortId}` });
+    res.json({ shortUrl: `${BASE_URL}/${shortId}` });
 });
 
 /**
@@ -99,29 +101,16 @@ app.post('/shorten', async (req, res) => {
 app.get('/:shortId', (req, res) => {
     const { shortId } = req.params;
     const originalUrl = urlDatabase[shortId];
-
+    
     if (!originalUrl) {
         return res.status(404).json({ error: 'Short URL not found' });
     }
-
-    // Add CORS headers explicitly
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
-
+    
     res.redirect(originalUrl);
-});
-
-// Handle CORS preflight requests
-app.options('/:shortId', (req, res) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
-    res.sendStatus(200);
 });
 
 // Step 6: Start Server
 app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-    console.log(`Swagger Docs available at http://localhost:${PORT}/api-docs`);
+    console.log(`Server running on ${BASE_URL}`);
+    console.log(`Swagger Docs available at ${BASE_URL}/api-docs`);
 });
